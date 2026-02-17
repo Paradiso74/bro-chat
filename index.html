@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Bro Chat</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.chat{
+  width:420px;
+  height:700px;
+  background:#111;
+  border-radius:20px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 0 30px #000;
+}
+
+/* HEADER */
+.header{
+  height:120px;
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:15px;
+  color:white;
+  border-bottom:1px solid #222;
+}
+
+.header img{
+  height:100px;
+  border-radius:10px;
+}
+
+.header h1{
+  font-size:32px;
+  margin:0;
+  letter-spacing:3px;
+}
+
+/* MENSAJES */
+.messages{
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+}
+
+.msg{
+  background:#222;
+  color:white;
+  padding:10px 15px;
+  border-radius:15px;
+  margin-bottom:10px;
+  max-width:75%;
+  align-self:flex-end;
+  word-wrap:break-word;
+}
+
+.msg img{
+  max-width:100%;
+  border-radius:10px;
+}
+
+/* INPUT */
+.input-area{
+  display:flex;
+  padding:10px;
+  background:#000;
+  border-top:1px solid #222;
+}
+
+.input-area input{
+  flex:1;
+  padding:10px;
+  border-radius:20px;
+  border:none;
+  outline:none;
+  font-size:16px;
+}
+
+.input-area button{
+  background:none;
+  border:none;
+  color:white;
+  font-size:22px;
+  margin-left:10px;
+  cursor:pointer;
+}
+
+.side-left,
+.side-right{
+  position:fixed;
+  top:50%;
+  transform:translateY(-50%) rotate(-90deg);
+  color:white;
+  font-size:20px;
+  letter-spacing:5px;
+}
+
+.side-left{ left:-60px; }
+.side-right{ right:-60px; }
+</style>
+</head>
+
+<body>
+
+<div class="side-left">BRO CHAT</div>
+<div class="side-right">BRO CHAT</div>
+
+<div class="chat">
+
+<div class="header">
+  <img src="foto.png">
+  <h1>BRO CHAT</h1>
+</div>
+
+<div class="messages" id="messages"></div>
+
+<div class="input-area">
+  <button onclick="openFile()">＋</button>
+  <input id="text" placeholder="Escribí algo..." onkeydown="if(event.key==='Enter')sendMessage()">
+  <button onclick="toggleRecord()" id="micBtn">🎤</button>
+</div>
+
+<input type="file" id="fileInput" style="display:none" accept="image/*">
+
+</div>
+
+<script>
+const messages=document.getElementById("messages");
+
+/* MENSAJE TEXTO */
+function sendMessage(){
+  const input=document.getElementById("text");
+  if(input.value.trim()==="") return;
+
+  const div=document.createElement("div");
+  div.className="msg";
+  div.innerText=input.value;
+  messages.appendChild(div);
+
+  input.value="";
+  messages.scrollTop=messages.scrollHeight;
+}
+
+/* FOTO */
+function openFile(){
+  document.getElementById("fileInput").click();
+}
+
+document.getElementById("fileInput").addEventListener("change",function(){
+  const file=this.files[0];
+  if(!file) return;
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const div=document.createElement("div");
+    div.className="msg";
+
+    const img=document.createElement("img");
+    img.src=e.target.result;
+
+    div.appendChild(img);
+    messages.appendChild(div);
+    messages.scrollTop=messages.scrollHeight;
+  }
+  reader.readAsDataURL(file);
+});
+
+/* AUDIO FUNCIONANDO */
+let mediaRecorder;
+let chunks=[];
+let recording=false;
+let stopTimeout;
+
+function toggleRecord(){
+
+  if(!recording){
+
+    navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+
+      mediaRecorder=new MediaRecorder(stream,{mimeType:"audio/webm"});
+      mediaRecorder.start();
+      chunks=[];
+      recording=true;
+      document.getElementById("micBtn").innerText="■";
+
+      mediaRecorder.ondataavailable=e=>{
+        if(e.data.size>0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop=()=>{
+        const blob=new Blob(chunks,{type:"audio/webm"});
+        const url=URL.createObjectURL(blob);
+
+        const div=document.createElement("div");
+        div.className="msg";
+
+        const audio=document.createElement("audio");
+        audio.controls=true;
+        audio.src=url;
+
+        div.appendChild(audio);
+        messages.appendChild(div);
+
+        document.getElementById("micBtn").innerText="🎤";
+        recording=false;
+
+        stream.getTracks().forEach(track=>track.stop());
+        messages.scrollTop=messages.scrollHeight;
+      };
+
+      stopTimeout=setTimeout(()=>mediaRecorder.stop(),8000);
+
+    }).catch(()=>{
+      alert("Permiso de micrófono denegado.");
+    });
+
+  }else{
+    clearTimeout(stopTimeout);
+    mediaRecorder.stop();
+  }
+}
+</script>
+
+</body>
+</html>
